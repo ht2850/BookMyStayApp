@@ -1,81 +1,59 @@
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
-class ConfirmedBooking {
-    private String reservationId;
-    private String guestName;
-    private String roomType;
-    private double totalCost;
-
-    public ConfirmedBooking(String reservationId, String guestName, String roomType, double totalCost) {
-        this.reservationId = reservationId;
-        this.guestName = guestName;
-        this.roomType = roomType;
-        this.totalCost = totalCost;
-    }
-
-    public double getTotalCost() { return totalCost; }
-
-    @Override
-    public String toString() {
-        return String.format("ID: %-8s | Guest: %-10s | Room: %-10s | Cost: $%.2f",
-                reservationId, guestName, roomType, totalCost);
+class BookingException extends Exception {
+    public BookingException(String message) {
+        super(message);
     }
 }
 
-class BookingHistory {
-    private List<ConfirmedBooking> history;
+class RoomInventory {
+    private Map<String, Integer> inventory = new HashMap<>();
 
-    public BookingHistory() {
-        this.history = new ArrayList<>();
+    public void addRoomType(String type, int count) {
+        inventory.put(type, count);
     }
 
-    public void recordBooking(ConfirmedBooking booking) {
-        history.add(booking);
-    }
-
-    public List<ConfirmedBooking> getHistoryRecords() {
-        return new ArrayList<>(history);
-    }
-}
-
-class ReportService {
-    public void generateSummaryReport(List<ConfirmedBooking> bookings) {
-        System.out.println("\n========== BOOKING SUMMARY REPORT ==========");
-        double totalRevenue = 0;
-
-        if (bookings.isEmpty()) {
-            System.out.println("No records found.");
-        } else {
-            for (ConfirmedBooking b : bookings) {
-                System.out.println(b);
-                totalRevenue += b.getTotalCost();
-            }
+    public void validateBooking(String type) throws BookingException {
+        if (!inventory.containsKey(type)) {
+            throw new BookingException("Error: Room type '" + type + "' does not exist in our system.");
         }
+        if (inventory.get(type) <= 0) {
+            throw new BookingException("Error: Room type '" + type + "' is currently sold out.");
+        }
+    }
 
-        System.out.println("--------------------------------------------");
-        System.out.println("Total Bookings: " + bookings.size());
-        System.out.printf("Total Revenue:  $%.2f\n", totalRevenue);
-        System.out.println("============================================\n");
+    public void deductInventory(String type) {
+        inventory.put(type, inventory.get(type) - 1);
+    }
+
+    public void displayStatus() {
+        System.out.println("Current Inventory: " + inventory);
     }
 }
 
 public class Main {
     public static void main(String[] args) {
-        System.out.println("--- Book My Stay App v8.0 ---");
+        System.out.println("--- Book My Stay App v9.0 ---");
 
-        BookingHistory historyStore = new BookingHistory();
-        ReportService reportService = new ReportService();
+        RoomInventory inventory = new RoomInventory();
+        inventory.addRoomType("Single", 1);
+        inventory.addRoomType("Suite", 2);
 
-        System.out.println("Recording confirmed bookings into history...");
+        String[] testRequests = {"Single", "Penthouse", "Single", "Suite"};
 
-        historyStore.recordBooking(new ConfirmedBooking("S-101", "Alice", "Suite", 325.0));
-        historyStore.recordBooking(new ConfirmedBooking("R-202", "Bob", "Single", 100.0));
-        historyStore.recordBooking(new ConfirmedBooking("D-303", "Charlie", "Double", 150.0));
+        for (String type : testRequests) {
+            System.out.println("\nAttempting to book: " + type);
+            try {
+                inventory.validateBooking(type);
+                inventory.deductInventory(type);
+                System.out.println("Success: Booking confirmed for " + type);
+            } catch (BookingException e) {
+                System.err.println("Validation Failed -> " + e.getMessage());
+            } finally {
+                inventory.displayStatus();
+            }
+        }
 
-        List<ConfirmedBooking> records = historyStore.getHistoryRecords();
-        reportService.generateSummaryReport(records);
-
-        System.out.println("Audit trail complete. History is preserved in arrival order.");
+        System.out.println("\nSystem remains stable after handling all errors.");
     }
 }
