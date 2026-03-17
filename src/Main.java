@@ -1,59 +1,75 @@
 import java.util.*;
 
-class BookingException extends Exception {
-    public BookingException(String message) {
-        super(message);
-    }
-}
-
 class RoomInventory {
     private Map<String, Integer> inventory = new HashMap<>();
+    private Map<String, Stack<String>> allocatedRoomIDs = new HashMap<>();
 
     public void addRoomType(String type, int count) {
         inventory.put(type, count);
+        allocatedRoomIDs.put(type, new Stack<>());
     }
 
-    public void validateBooking(String type) throws BookingException {
-        if (!inventory.containsKey(type)) {
-            throw new BookingException("Error: Room type '" + type + "' does not exist in our system.");
+    public String bookRoom(String type) {
+        if (inventory.getOrDefault(type, 0) > 0) {
+            int currentCount = inventory.get(type);
+            String roomID = type.substring(0, 1).toUpperCase() + "-" + (100 + currentCount);
+
+            inventory.put(type, currentCount - 1);
+            allocatedRoomIDs.get(type).push(roomID);
+            return roomID;
         }
-        if (inventory.get(type) <= 0) {
-            throw new BookingException("Error: Room type '" + type + "' is currently sold out.");
-        }
+        return null;
     }
 
-    public void deductInventory(String type) {
-        inventory.put(type, inventory.get(type) - 1);
+    public void cancelBooking(String type) throws Exception {
+        if (!allocatedRoomIDs.containsKey(type) || allocatedRoomIDs.get(type).isEmpty()) {
+            throw new Exception("Cancellation Failed: No active bookings found for type " + type);
+        }
+
+        String releasedID = allocatedRoomIDs.get(type).pop();
+        int currentCount = inventory.get(type);
+        inventory.put(type, currentCount + 1);
+
+        System.out.println("Rollback Successful: Room " + releasedID + " returned to inventory.");
     }
 
     public void displayStatus() {
-        System.out.println("Current Inventory: " + inventory);
+        System.out.println("Inventory: " + inventory);
+        System.out.println("Allocated IDs: " + allocatedRoomIDs);
+        System.out.println("--------------------------------------------------");
     }
 }
 
 public class Main {
     public static void main(String[] args) {
-        System.out.println("--- Book My Stay App v9.0 ---");
+        System.out.println("--- Book My Stay App v10.0 ---");
 
-        RoomInventory inventory = new RoomInventory();
-        inventory.addRoomType("Single", 1);
-        inventory.addRoomType("Suite", 2);
+        RoomInventory hotel = new RoomInventory();
+        hotel.addRoomType("Suite", 2);
 
-        String[] testRequests = {"Single", "Penthouse", "Single", "Suite"};
+        System.out.println("Initial State:");
+        hotel.displayStatus();
 
-        for (String type : testRequests) {
-            System.out.println("\nAttempting to book: " + type);
-            try {
-                inventory.validateBooking(type);
-                inventory.deductInventory(type);
-                System.out.println("Success: Booking confirmed for " + type);
-            } catch (BookingException e) {
-                System.err.println("Validation Failed -> " + e.getMessage());
-            } finally {
-                inventory.displayStatus();
-            }
+        System.out.println("Processing 2 bookings for 'Suite'...");
+        hotel.bookRoom("Suite");
+        hotel.bookRoom("Suite");
+        hotel.displayStatus();
+
+        System.out.println("Guest initiates cancellation for 'Suite'...");
+        try {
+            hotel.cancelBooking("Suite");
+        } catch (Exception e) {
+            System.err.println(e.getMessage());
         }
 
-        System.out.println("\nSystem remains stable after handling all errors.");
+        System.out.println("Final State after Rollback:");
+        hotel.displayStatus();
+
+        System.out.println("Attempting invalid cancellation...");
+        try {
+            hotel.cancelBooking("Single");
+        } catch (Exception e) {
+            System.out.println("Caught Expected Error: " + e.getMessage());
+        }
     }
 }
