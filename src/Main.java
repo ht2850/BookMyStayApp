@@ -1,81 +1,81 @@
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
-class Service {
-    private String name;
-    private double price;
+class ConfirmedBooking {
+    private String reservationId;
+    private String guestName;
+    private String roomType;
+    private double totalCost;
 
-    public Service(String name, double price) {
-        this.name = name;
-        this.price = price;
+    public ConfirmedBooking(String reservationId, String guestName, String roomType, double totalCost) {
+        this.reservationId = reservationId;
+        this.guestName = guestName;
+        this.roomType = roomType;
+        this.totalCost = totalCost;
     }
 
-    public String getName() { return name; }
-    public double getPrice() { return price; }
+    public double getTotalCost() { return totalCost; }
 
     @Override
     public String toString() {
-        return name + " ($" + price + ")";
+        return String.format("ID: %-8s | Guest: %-10s | Room: %-10s | Cost: $%.2f",
+                reservationId, guestName, roomType, totalCost);
     }
 }
 
-class AddOnManager {
-    private Map<String, List<Service>> reservationAddOns;
+class BookingHistory {
+    private List<ConfirmedBooking> history;
 
-    public AddOnManager() {
-        this.reservationAddOns = new HashMap<>();
+    public BookingHistory() {
+        this.history = new ArrayList<>();
     }
 
-    public void addServiceToReservation(String reservationId, Service service) {
-        reservationAddOns.computeIfAbsent(reservationId, k -> new ArrayList<>()).add(service);
-        System.out.println("Added " + service.getName() + " to Reservation: " + reservationId);
+    public void recordBooking(ConfirmedBooking booking) {
+        history.add(booking);
     }
 
-    public double calculateTotalServiceCost(String reservationId) {
-        List<Service> services = reservationAddOns.getOrDefault(reservationId, new ArrayList<>());
-        double total = 0;
-        for (Service s : services) {
-            total += s.getPrice();
-        }
-        return total;
+    public List<ConfirmedBooking> getHistoryRecords() {
+        return new ArrayList<>(history);
     }
+}
 
-    public void displayReservationAddOns(String reservationId) {
-        List<Service> services = reservationAddOns.get(reservationId);
-        if (services == null || services.isEmpty()) {
-            System.out.println("No add-on services for " + reservationId);
+class ReportService {
+    public void generateSummaryReport(List<ConfirmedBooking> bookings) {
+        System.out.println("\n========== BOOKING SUMMARY REPORT ==========");
+        double totalRevenue = 0;
+
+        if (bookings.isEmpty()) {
+            System.out.println("No records found.");
         } else {
-            System.out.println("Add-ons for " + reservationId + ": " + services);
+            for (ConfirmedBooking b : bookings) {
+                System.out.println(b);
+                totalRevenue += b.getTotalCost();
+            }
         }
+
+        System.out.println("--------------------------------------------");
+        System.out.println("Total Bookings: " + bookings.size());
+        System.out.printf("Total Revenue:  $%.2f\n", totalRevenue);
+        System.out.println("============================================\n");
     }
 }
 
 public class Main {
     public static void main(String[] args) {
-        System.out.println("--- Book My Stay App v7.0 ---");
+        System.out.println("--- Book My Stay App v8.0 ---");
 
-        AddOnManager addOnManager = new AddOnManager();
+        BookingHistory historyStore = new BookingHistory();
+        ReportService reportService = new ReportService();
 
-        Service breakfast = new Service("Buffet Breakfast", 25.0);
-        Service spa = new Service("Spa Treatment", 80.0);
-        Service wifi = new Service("Premium Wi-Fi", 15.0);
+        System.out.println("Recording confirmed bookings into history...");
 
-        String resId1 = "S-101";
-        String resId2 = "SU-105";
+        historyStore.recordBooking(new ConfirmedBooking("S-101", "Alice", "Suite", 325.0));
+        historyStore.recordBooking(new ConfirmedBooking("R-202", "Bob", "Single", 100.0));
+        historyStore.recordBooking(new ConfirmedBooking("D-303", "Charlie", "Double", 150.0));
 
-        System.out.println("Processing Add-on Selections...");
-        addOnManager.addServiceToReservation(resId1, breakfast);
-        addOnManager.addServiceToReservation(resId1, wifi);
-        addOnManager.addServiceToReservation(resId2, spa);
+        List<ConfirmedBooking> records = historyStore.getHistoryRecords();
+        reportService.generateSummaryReport(records);
 
-        System.out.println("\n--- Service Summary ---");
-        addOnManager.displayReservationAddOns(resId1);
-        System.out.println("Total Add-on Cost for " + resId1 + ": $" + addOnManager.calculateTotalServiceCost(resId1));
-
-        System.out.println();
-
-        addOnManager.displayReservationAddOns(resId2);
-        System.out.println("Total Add-on Cost for " + resId2 + ": $" + addOnManager.calculateTotalServiceCost(resId2));
-
-        System.out.println("\nCore inventory and booking state remain isolated from add-on logic.");
+        System.out.println("Audit trail complete. History is preserved in arrival order.");
     }
 }
