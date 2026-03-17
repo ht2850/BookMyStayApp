@@ -1,5 +1,4 @@
-import java.util.LinkedList;
-import java.util.Queue;
+import java.util.*;
 
 class ReservationRequest {
     private String guestName;
@@ -15,70 +14,70 @@ class ReservationRequest {
 
     @Override
     public String toString() {
-        return "Request [Guest: " + guestName + ", Room Type: " + roomType + "]";
+        return guestName + " (" + roomType + ")";
     }
 }
 
-class BookingQueue {
-    private Queue<ReservationRequest> requestQueue;
+class RoomInventory {
+    private Map<String, Integer> inventory = new HashMap<>();
+    private Map<String, Set<String>> allocatedRooms = new HashMap<>();
 
-    public BookingQueue() {
-        this.requestQueue = new LinkedList<>();
+    public void addRoomType(String type, int count) {
+        inventory.put(type, count);
+        allocatedRooms.put(type, new HashSet<>());
     }
 
-    public void enqueueRequest(ReservationRequest request) {
-        requestQueue.add(request);
-        System.out.println("Queued: " + request);
+    public boolean isAvailable(String type) {
+        return inventory.getOrDefault(type, 0) > 0;
     }
 
-    public ReservationRequest peekNextRequest() {
-        return requestQueue.peek();
+    public String allocateRoom(String type) {
+        int currentCount = inventory.get(type);
+        String roomId = type.substring(0, 1).toUpperCase() + "-" + (100 + currentCount);
+
+        inventory.put(type, currentCount - 1);
+        allocatedRooms.get(type).add(roomId);
+        return roomId;
     }
 
-    public ReservationRequest dequeueRequest() {
-        return requestQueue.poll();
-    }
-
-    public boolean isEmpty() {
-        return requestQueue.isEmpty();
-    }
-
-    public int getQueueSize() {
-        return requestQueue.size();
-    }
-
-    public void displayQueue() {
-        System.out.println("\n--- Current Booking Queue (FIFO) ---");
-        if (requestQueue.isEmpty()) {
-            System.out.println("Queue is empty.");
-        } else {
-            for (ReservationRequest req : requestQueue) {
-                System.out.println(">> " + req);
-            }
+    public void displayStatus() {
+        System.out.println("\n--- Final System State ---");
+        for (String type : inventory.keySet()) {
+            System.out.println(type + " -> Available: " + inventory.get(type) +
+                    " | Allocated IDs: " + allocatedRooms.get(type));
         }
-        System.out.println("------------------------------------\n");
+        System.out.println("--------------------------");
     }
 }
 
 public class Main {
     public static void main(String[] args) {
-        System.out.println("--- Book My Stay App v5.0 ---");
+        System.out.println("--- Book My Stay App v6.0 ---");
 
-        BookingQueue bookingQueue = new BookingQueue();
+        RoomInventory inventory = new RoomInventory();
+        inventory.addRoomType("Single", 2);
+        inventory.addRoomType("Suite", 1);
 
-        System.out.println("Simulating incoming booking requests...");
-        bookingQueue.enqueueRequest(new ReservationRequest("Alice", "Suite"));
-        bookingQueue.enqueueRequest(new ReservationRequest("Bob", "Single"));
-        bookingQueue.enqueueRequest(new ReservationRequest("Charlie", "Double"));
+        Queue<ReservationRequest> requestQueue = new LinkedList<>();
+        requestQueue.add(new ReservationRequest("Alice", "Suite"));
+        requestQueue.add(new ReservationRequest("Bob", "Single"));
+        requestQueue.add(new ReservationRequest("Charlie", "Suite")); // Should fail (out of stock)
+        requestQueue.add(new ReservationRequest("Dave", "Single"));
 
-        bookingQueue.displayQueue();
+        System.out.println("Processing Queue...\n");
 
-        System.out.println("Preparing for next processing stage...");
-        if (!bookingQueue.isEmpty()) {
-            System.out.println("Next request to process: " + bookingQueue.peekNextRequest());
+        while (!requestQueue.isEmpty()) {
+            ReservationRequest request = requestQueue.poll();
+            System.out.print("Processing " + request + ": ");
+
+            if (inventory.isAvailable(request.getRoomType())) {
+                String assignedId = inventory.allocateRoom(request.getRoomType());
+                System.out.println("CONFIRMED. Assigned Room: " + assignedId);
+            } else {
+                System.out.println("REJECTED. No availability.");
+            }
         }
 
-        System.out.println("\nTotal requests waiting: " + bookingQueue.getQueueSize());
-        System.out.println("Note: Inventory has not been modified yet.");
+        inventory.displayStatus();
     }
 }
